@@ -82,10 +82,9 @@ all_samples = sorted(set(sample_df.samplename))
 #########
 rule all:
     input:
-        expand(('output/{amplicon}/{sampletype}/'
+        expand(('output/{amplicon}/'
                 'convert_for_gutfilter/precluster.fasta'),
-               amplicon=['V1-2', 'V6-7'],
-               sampletype=['DNA', 'RNA'])
+               amplicon=['V1-2', 'V6-7'])
 
 rule trim_merge:
     input:
