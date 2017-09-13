@@ -2,7 +2,8 @@
 
 import os
 import pandas
-
+import pathlib
+import shutil
 
 #############
 # FUNCTIONS #
@@ -28,12 +29,27 @@ def trim_input_resolver(wildcards):
     return input_files
 
 
+def get_full_path(binary):
+    which = shutil.which(binary)
+    # check if the binary exists
+    if not which:
+        raise EnvironmentError(
+            'Dependency {0} not found in $PATH'.format(binary))
+    # get the full path to binary
+    binary_path = pathlib.Path(which).resolve()
+    return str(binary_path)
+
+
 ###########
 # GLOBALS #
 ###########
 
 read_dir = 'data/NZGL01875'
 sample_key = 'data/nzgl01875_seq_summary.csv'
+
+# binaries
+mothur = get_full_path('bin/mothur/mothur')
+swarm = get_full_path('bin/swarm')
 
 #########
 # SETUP #
@@ -181,7 +197,7 @@ rule dereplicate:
         'cp {input} {output.fa} ; '
         'bash -c \''
         'cd {params.wd} || exit 1 ; '
-        'mothur "'
+        '{mothur} "'
         '#unique.seqs(fasta=all.fasta)" '
         '\' &> {log}'
 
@@ -209,7 +225,7 @@ rule swarm:
     log:
         'output/{amplicon}/{sampletype}/swarm/swarm.log'
     shell:
-        'swarm '
+        '{swarm} '
         '-d 6 '
         '-t {threads} '
         '-l {log} '
