@@ -5,6 +5,7 @@ from Bio import SeqIO
 
 fq = snakemake.input[0]
 samplename = snakemake.params['samplename']
+sampletype = snakemake.params['sampletype']
 outfile = snakemake.output[0]
 
 # open read file
@@ -15,8 +16,8 @@ with gzip.open(fq, 'rt') as handle:
     i = 0
     for rec in records:
         i += 1
-        rec.id = '{0}|{1}'.format(
-            samplename, str(i))
+        rec.id = '{0}_{1}|{2}'.format(
+            samplename, sampletype, str(i))
         rec.name = ''
         rec.description = ''
 

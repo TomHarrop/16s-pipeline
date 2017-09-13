@@ -75,14 +75,7 @@ for dirpath, filenames in read_dir_files:
             fastq_files.append(os.path.join(dirpath, filename))
 
 # generate the target paths
-trim_target_paths = sorted(
-    set('{0}/{1}/{2}'.format(
-            x[1].amplicon,
-            x[1].sampletype,
-            x[1].samplename)
-        for x in sample_df.iterrows()))
 all_samples = sorted(set(sample_df.samplename))
-
 
 #########
 # RULES #
@@ -163,17 +156,19 @@ rule rename_reads:
         ('output/{amplicon}/{sampletype}/rename_reads/'
          '{samplename}.fasta')
     params:
-        samplename = '{samplename}'
+        samplename = '{samplename}',
+        sampletype = '{sampletype}'
     script:
         'src/rename_fastq_header.py'
 
 rule merge_samples:
     input:
-        expand('output/{{amplicon}}/{{sampletype}}/rename_reads/'
-               '{sample}.fasta',
-               sample=all_samples)
+        expand('output/{{amplicon}}/{sampletype}/rename_reads/'
+               '{samplename}.fasta',
+               samplename=all_samples,
+               sampletype=['DNA', 'RNA'])
     output:
-        'output/{amplicon}/{sampletype}/merge_samples/all.fasta'
+        'output/{amplicon}/merge_samples/all.fasta'
     threads:
         1
     shell:
@@ -182,17 +177,17 @@ rule merge_samples:
 # Dereplicate using mothur
 rule dereplicate:
     input:
-        'output/{amplicon}/{sampletype}/merge_samples/all.fasta'
+        'output/{amplicon}/merge_samples/all.fasta'
     output:
-        fa = temp('output/{amplicon}/{sampletype}/dereplicate/all.fasta'),
-        derep = 'output/{amplicon}/{sampletype}/dereplicate/all.unique.fasta',
-        names = 'output/{amplicon}/{sampletype}/dereplicate/all.names'
+        fa = temp('output/{amplicon}/dereplicate/all.fasta'),
+        derep = 'output/{amplicon}/dereplicate/all.unique.fasta',
+        names = 'output/{amplicon}/dereplicate/all.names'
     threads:
         1
     params:
-        wd = 'output/{amplicon}/{sampletype}/dereplicate/'
+        wd = 'output/{amplicon}/dereplicate/'
     log:
-        'output/{amplicon}/{sampletype}/dereplicate/mothur.log'
+        'output/{amplicon}/dereplicate/mothur.log'
     shell:
         'cp {input} {output.fa} ; '
         'bash -c \''
@@ -204,11 +199,11 @@ rule dereplicate:
 # Reformat mothur’s output for swarm:
 rule reformat_for_swarm:
     input:
-        'output/{amplicon}/{sampletype}/dereplicate/all.unique.fasta'
+        'output/{amplicon}/dereplicate/all.unique.fasta'
     output:
-        'output/{amplicon}/{sampletype}/reformat_for_swarm/all.unique.fasta'
+        'output/{amplicon}/reformat_for_swarm/all.unique.fasta'
     params:
-        names = 'output/{amplicon}/{sampletype}/dereplicate/all.names'
+        names = 'output/{amplicon}/dereplicate/all.names'
     threads:
         1
     script:
@@ -217,13 +212,13 @@ rule reformat_for_swarm:
 # Cluster using swarm:
 rule swarm:
     input:
-        'output/{amplicon}/{sampletype}/reformat_for_swarm/all.unique.fasta'
+        'output/{amplicon}/reformat_for_swarm/all.unique.fasta'
     output:
-        'output/{amplicon}/{sampletype}/swarm/all.unique.swarm'
+        'output/{amplicon}/swarm/all.unique.swarm'
     threads:
         8
     log:
-        'output/{amplicon}/{sampletype}/swarm/swarm.log'
+        'output/{amplicon}/swarm/swarm.log'
     shell:
         '{swarm} '
         '-d 6 '
@@ -235,14 +230,14 @@ rule swarm:
 # Convert the output for gutfilter
 rule convert_for_gutfilter:
     input:
-        mothur_names = 'output/{amplicon}/{sampletype}/dereplicate/all.names',
-        swarm_results = 'output/{amplicon}/{sampletype}/swarm/all.unique.swarm',
-        dereplicated_fasta = ('output/{amplicon}/{sampletype}/dereplicate/'
+        mothur_names = 'output/{amplicon}/dereplicate/all.names',
+        swarm_results = 'output/{amplicon}/swarm/all.unique.swarm',
+        dereplicated_fasta = ('output/{amplicon}/dereplicate/'
                               'all.unique.fasta')
     output:
-        names = ('output/{amplicon}/{sampletype}/'
+        names = ('output/{amplicon}/'
                  'convert_for_gutfilter/precluster.names'),
-        fasta = ('output/{amplicon}/{sampletype}/'
+        fasta = ('output/{amplicon}/'
                  'convert_for_gutfilter/precluster.fasta')
     threads:
         1
