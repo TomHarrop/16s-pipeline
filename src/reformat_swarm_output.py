@@ -18,6 +18,11 @@ swarm_results = snakemake.input['swarm_results']
 dereplicated_fasta = snakemake.input['dereplicated_fasta']
 output_names = snakemake.output['names']
 output_fasta = snakemake.output['fasta']
+long_table_file = snakemake.output['long_table']
+
+# mothur_names = 'output/V6-7/dereplicate/all.names'
+# swarm_results = 'output/V6-7/swarm/all.unique.swarm'
+# dereplicated_fasta = 'output/V6-7/dereplicate/all.unique.fasta'
 
 # generate a dict of names from the mothur namefile
 with open(mothur_names, 'rt') as mothur:
@@ -47,6 +52,21 @@ for key in renamed_swarms:
         if mothur_name_dict[read_name]:
             names_list += mothur_name_dict[read_name] + ','
     names_output.append([key, names_list.rstrip(',')])
+
+# read over the renamed_swarms a second time to generate a long-form data.frame
+# for loading into R
+with open(long_table_file, 'wt') as long_table:
+    long_table.write('otu_id\tread_name\n')
+    for key in renamed_swarms:
+        read_list = []
+        for read_name in renamed_swarms[key]:
+            if mothur_name_dict[read_name]:
+                mothur_reads = mothur_name_dict[read_name].split(',')
+                for mothur_read in mothur_reads:
+                    read_list.append(mothur_read)
+        for read in read_list:
+            long_table.write('{0}\t{1}\n'.format(key, read))
+
 
 # write as names file
 with open(output_names, 'w', newline='') as mothur:

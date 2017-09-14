@@ -82,8 +82,7 @@ all_samples = sorted(set(sample_df.samplename))
 #########
 rule all:
     input:
-        expand(('output/{amplicon}/'
-                'convert_for_gutfilter/precluster.fasta'),
+        expand(('output/{amplicon}/gutfilter/kept_otus.txt'),
                amplicon=['V1-2', 'V6-7'])
 
 rule trim_merge:
@@ -237,8 +236,20 @@ rule convert_for_gutfilter:
         names = ('output/{amplicon}/'
                  'convert_for_gutfilter/precluster.names'),
         fasta = ('output/{amplicon}/'
-                 'convert_for_gutfilter/precluster.fasta')
+                 'convert_for_gutfilter/precluster.fasta'),
+        long_table = ('output/{amplicon}/'
+                      'convert_for_gutfilter/long_table.tab'),
     threads:
         1
     script:
         'src/reformat_swarm_output.py'
+
+rule gutfilter:
+    input:
+        precluster_names = ('output/{amplicon}/'
+                            'convert_for_gutfilter/long_table.tab')
+    output:
+        kept_otus = 'output/{amplicon}/gutfilter/kept_otus.txt',
+        count_table = 'output/{amplicon}/gutfilter/count_table.txt',
+        abundance_table = 'output/{amplicon}/gutfilter/abundance_table.txt',
+        filter_file = 'output/{amplicon}/gutfilter/filter_table.txt'
