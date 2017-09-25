@@ -51,6 +51,10 @@ sample_key = 'data/nzgl01875_seq_summary.csv'
 mothur = get_full_path('bin/mothur/mothur')
 swarm = get_full_path('bin/swarm')
 
+# datafiles
+silva_align = pathlib.Path('data/silva/silva.seed_v128.align').resolve()
+silva_tax = pathlib.Path('data/silva/silva.seed_v128.tax').resolve()
+
 #########
 # SETUP #
 #########
@@ -82,7 +86,8 @@ all_samples = sorted(set(sample_df.samplename))
 #########
 rule all:
     input:
-        expand(('output/{amplicon}/gutfilter/kept_otus.txt'),
+        expand(('output/{amplicon}/annotate_otus/'
+                'keptotus.seed_v128.wang.taxonomy'),
                amplicon=['V1-2', 'V6-7'])
 
 rule trim_merge:
@@ -253,3 +258,50 @@ rule gutfilter:
         count_table = 'output/{amplicon}/gutfilter/count_table.txt',
         abundance_table = 'output/{amplicon}/gutfilter/abundance_table.txt',
         filter_file = 'output/{amplicon}/gutfilter/filter_table.txt'
+    threads:
+        1
+    script:
+        'src/gut_filter.R'
+
+rule gutfilter_reads:
+    input:
+        kept_otus = 'output/{amplicon}/gutfilter/kept_otus.txt',
+        fasta = ('output/{amplicon}/'
+                 'convert_for_gutfilter/precluster.fasta')
+    output:
+        'output/{amplicon}/gutfilter/keptotus.fasta'
+    log:
+        'output/{amplicon}/gutfilter/filterbyname.log'
+    threads:
+        1
+    shell:
+        'bin/bbmap/filterbyname.sh '
+        'in={input.fasta} '
+        'out={output} '
+        'names={input.kept_otus} '
+        'include=t '
+        '2> {log}'
+
+# Annotate the OTUs in the table using mothur
+rule annotate_otus:
+    input:
+        fasta = 'output/{amplicon}/gutfilter/keptotus.fasta'
+    output:
+        fasta = temp('output/{amplicon}/annotate_otus/keptotus.fasta'),
+        tax = 'output/{amplicon}/annotate_otus/keptotus.seed_v128.wang.taxonomy'
+    params:
+        wd = 'output/{amplicon}/annotate_otus'
+    log:
+        'output/{amplicon}/annotate_otus/mothur.log'
+    threads:
+        16
+    shell:
+        'cp {input.fasta} {output.fasta} ; '
+        'bash -c \''
+        'cd {params.wd} || exit 1 ; '
+        '{mothur} "'
+        '#classify.seqs(fasta=keptotus.fasta, '
+        'template={silva_align}, '
+        'taxonomy={silva_tax}, '
+        'processors={threads})" '
+        '\' &> {log}'
