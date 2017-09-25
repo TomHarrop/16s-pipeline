@@ -86,8 +86,8 @@ all_samples = sorted(set(sample_df.samplename))
 #########
 rule all:
     input:
-        expand(('output/{amplicon}/annotate_otus/'
-                'keptotus.seed_v128.wang.taxonomy'),
+        expand(('output/{amplicon}/tree/'
+                'keptotus.phylip.tre'),
                amplicon=['V1-2', 'V6-7'])
 
 rule trim_merge:
@@ -305,3 +305,37 @@ rule annotate_otus:
         'taxonomy={silva_tax}, '
         'processors={threads})" '
         '\' &> {log}'
+
+# Make a phylogenetic tree with mothur
+rule mothur_tree:
+    input:
+        fasta = 'output/{amplicon}/gutfilter/keptotus.fasta',
+        tax = ('output/{amplicon}/annotate_otus/'
+               'keptotus.seed_v128.wang.taxonomy')
+    output:
+        fasta = temp('output/{amplicon}/annotate_otus/keptotus.fasta'),
+        align = 'output/{amplicon}/tree/keptotus.align',
+        tax = temp(('output/{amplicon}/tree/'
+                    'keptotus.seed_v128.wang.taxonomy')),
+        tree = 'output/{amplicon}/tree/keptotus.phylip.tre'
+    params:
+        wd = 'output/{amplicon}/tree'
+    threads:
+        16
+    log:
+        'output/{amplicon}/tree/mothur.log'
+    shell:
+        'cp {input.fasta} {output.fasta} ; '
+        'cp {input.tax} {output.tax} ; '
+        'bash -c \''
+        'cd {params.wd} || exit 1 ; '
+        '{mothur} "'
+        '#align.seqs(candidate=keptotus.fasta, '
+        'template={silva_align}, '
+        'processors={threads})" ; '
+        '{mothur} "#dist.seqs(fasta=keptotus.align, output=lt)" ; '
+        '{mothur} "#clearcut(phylip=keptotus.phylip.dist)" ; '
+        '{mothur} "#classify.tree(taxonomy=keptotus.seed_v128.wang.taxonomy '
+        'tree=keptotus.phylip.tre)" '
+        '\' &> {log} '
+
