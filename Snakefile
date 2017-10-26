@@ -313,8 +313,8 @@ rule mothur_tree:
         tax = ('output/{amplicon}/annotate_otus/'
                'keptotus.seed_v128.wang.taxonomy')
     output:
-        fasta = temp('output/{amplicon}/annotate_otus/keptotus.fasta'),
-        align = 'output/{amplicon}/tree/keptotus.align',
+        fasta = temp('output/{amplicon}/tree/keptotus.fasta'),
+#        align = 'output/{amplicon}/tree/keptotus.align',
         tax = temp(('output/{amplicon}/tree/'
                     'keptotus.seed_v128.wang.taxonomy')),
         tree = 'output/{amplicon}/tree/keptotus.phylip.tre'
@@ -332,10 +332,11 @@ rule mothur_tree:
         '{mothur} "'
         '#align.seqs(candidate=keptotus.fasta, '
         'template={silva_align}, '
-        'processors={threads})" ; '
+        'processors={threads}, '
+        'flip=t)" ; '
         '{mothur} "#dist.seqs(fasta=keptotus.align, output=lt)" ; '
+        '{mothur} "#tree.shared(phylip=keptotus.phylip.dist)" ; '
         '{mothur} "#clearcut(phylip=keptotus.phylip.dist)" ; '
-        '{mothur} "#classify.tree(taxonomy=keptotus.seed_v128.wang.taxonomy '
+        '{mothur} "#classify.tree(taxonomy=keptotus.seed_v128.wang.taxonomy, '
         'tree=keptotus.phylip.tre)" '
         '\' &> {log} '
-
